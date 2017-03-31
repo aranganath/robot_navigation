@@ -7,7 +7,7 @@ from sys import path as sys_path
 
 from pkgutil import extend_path
 
-__extended_path = "/home/aditya/CSE180/src/controller_manager/src".split(";")
+__extended_path = "/home/aditya/project/robot_navigation/CSE180/src/controller_manager/src".split(";")
 for p in reversed(__extended_path):
     sys_path.insert(0, p)
     del p

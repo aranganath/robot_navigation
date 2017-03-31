@@ -4,5 +4,5 @@ PROJECT_PKG_CONFIG_INCLUDE_DIRS = "".split(';') if "" != "" else []
 PROJECT_CATKIN_DEPENDS = "".replace(';', ' ')
 PKG_CONFIG_LIBRARIES_WITH_PREFIX = "".split(';') if "" != "" else []
 PROJECT_NAME = "cse180final"
-PROJECT_SPACE_DIR = "/home/aditya/CSE180/devel"
+PROJECT_SPACE_DIR = "/home/aditya/project/robot_navigation/CSE180/devel"
 PROJECT_VERSION = "0.0.0"

@@ -1,8 +1,8 @@
-prefix=/home/aditya/CSE180/devel
+prefix=/home/aditya/project/robot_navigation/CSE180/devel
 
 Name: husky_navigation
 Description: Description of husky_navigation
 Version: 0.2.7
 Cflags: 
-Libs: -L/home/aditya/CSE180/devel/lib 
+Libs: -L/home/aditya/project/robot_navigation/CSE180/devel/lib 
 Requires: 

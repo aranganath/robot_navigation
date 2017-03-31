@@ -1,8 +1,8 @@
-prefix=/home/aditya/CSE180/devel
+prefix=/home/aditya/project/robot_navigation/CSE180/devel
 
 Name: husky_msgs
 Description: Description of husky_msgs
 Version: 0.2.7
-Cflags: -I/home/aditya/CSE180/devel/include
-Libs: -L/home/aditya/CSE180/devel/lib 
+Cflags: -I/home/aditya/project/robot_navigation/CSE180/devel/include
+Libs: -L/home/aditya/project/robot_navigation/CSE180/devel/lib 
 Requires: std_msgs message_runtime
