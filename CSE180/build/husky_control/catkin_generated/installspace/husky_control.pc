@@ -1,0 +1,8 @@
+prefix=/home/aditya/CSE180/install
+
+Name: husky_control
+Description: Description of husky_control
+Version: 0.2.7
+Cflags: 
+Libs: -L/home/aditya/CSE180/install/lib 
+Requires: 

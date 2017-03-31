@@ -1,0 +1,8 @@
+prefix=/home/aditya/CSE180/install
+
+Name: simple
+Description: Description of simple
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/aditya/CSE180/install/lib 
+Requires: 
