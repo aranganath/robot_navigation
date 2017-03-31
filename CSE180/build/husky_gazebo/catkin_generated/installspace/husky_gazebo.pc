@@ -1,8 +1,0 @@
-prefix=/home/aditya/project/robot_navigation/CSE180/install
-
-Name: husky_gazebo
-Description: Description of husky_gazebo
-Version: 0.2.6
-Cflags: 
-Libs: -L/home/aditya/project/robot_navigation/CSE180/install/lib 
-Requires: 

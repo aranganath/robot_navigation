@@ -1,8 +1,0 @@
-prefix=/home/aditya/project/robot_navigation/CSE180/install
-
-Name: cse180final
-Description: Description of cse180final
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/aditya/project/robot_navigation/CSE180/install/lib 
-Requires: 

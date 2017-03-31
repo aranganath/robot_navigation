@@ -1,8 +1,0 @@
-prefix=/home/aditya/project/robot_navigation/CSE180/install
-
-Name: husky_description
-Description: Description of husky_description
-Version: 0.2.7
-Cflags: 
-Libs: -L/home/aditya/project/robot_navigation/CSE180/install/lib 
-Requires: 

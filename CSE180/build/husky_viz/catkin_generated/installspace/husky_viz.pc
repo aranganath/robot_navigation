@@ -1,8 +1,0 @@
-prefix=/home/aditya/project/robot_navigation/CSE180/install
-
-Name: husky_viz
-Description: Description of husky_viz
-Version: 0.2.2
-Cflags: 
-Libs: -L/home/aditya/project/robot_navigation/CSE180/install/lib 
-Requires: 
