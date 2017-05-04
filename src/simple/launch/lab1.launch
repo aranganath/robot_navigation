@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="turtlesim" name="sim" type="turtlesim_node"/>
+    <node pkg="simple" name="simp" type="turtle_navigator"/>
+    <node pkg="simple" name="simp1" type="printcolor"/>
+    <node pkg="simple" name="simp2" type="chatter"/>
+
+</launch>
+
