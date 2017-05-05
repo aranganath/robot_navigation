@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <tf/transform_datatypes.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -9,97 +10,125 @@
 #include "occupancy_grid_utils/coordinate_conversions.h"
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-#include <boost/optional.hpp>
+#include <boost/shared_ptr.hpp>
 #include <sensor_msgs/LaserScan.h>
 #include <iostream>
 #include <math.h>
+#include <vector>
 #include <sensor_msgs/PointCloud.h>
-// #include <navfn/navfn.h>
-// using namespace std;
-typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-typedef boost::optional<occupancy_grid_utils::AStarResult> AStarResult;
-typedef geometry_msgs::PoseWithCovarianceStamped gmPS;
-typedef geometry_msgs::Point gm;
-typedef geometry_msgs::Twist navigate;
-typedef nav_msgs::OccupancyGrid Occupancy;
-typedef sensor_msgs::LaserScan Scan;
-bool isFirst;
-typedef sensor_msgs::PointCloud Cloud;
-Cloud cloud;
-// typedef occupancy_grid_utils::
-// typedef navfn::NavfnROS Planner;
+#include <map>
+nav_msgs::OccupancyGrid l_occ;
+nav_msgs::OccupancyGrid g_occ;
+occupancy_grid_utils::Cell cell;
+std::vector<std::pair<geometry_msgs::Point, int>> g_map;
+std::vector<std::pair<geometry_msgs::Point, int>> l_map;
+geometry_msgs::PoseWithCovarianceStamped Pose;
+actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base",true);
+bool map_initiliazed=false;
+bool flag=true;
 
-bool check_for_obstacles(Scan ranges);
-gmPS amcl_pose;
-Scan scan;
-Occupancy map;
-// Planner planner(map.info.width, map.info.height);
-// Planner plan;
-
-// void ekf_callback(const nav_msgs::Odometry &msg);
-void map_callback(const nav_msgs::OccupancyGrid &msg);
-void scan_callback(const sensor_msgs::LaserScan &msg);
-void amcl_callback(const geometry_msgs::PoseWithCovarianceStamped &msg);
-float identitify_obstacles(Scan msg);
-void point_cloud_callback(const sensor_msgs::PointCloud msg);
-navigate turn_to_maximum(Scan msg);
+void local_map_callback(const nav_msgs::OccupancyGrid& msg);
+void global_map_callback(const nav_msgs::OccupancyGrid& msg);
+bool check_map_descrepancy(geometry_msgs::Point l_it, geometry_msgs::Point g_it, int l_data, int g_data);
+void amcl_callback(const geometry_msgs::PoseWithCovarianceStamped& msg);
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "map_data");
     ros::NodeHandle nh;
-    ros::Rate r(10);
-    ros::Subscriber ekf_sub = nh.subscribe("/amcl_pose", 1000, &amcl_callback);
-    ros::Subscriber map_sub = nh.subscribe("/map", 1000, &map_callback);
-    ros::Subscriber scan_sub = nh.subscribe("/scan", 1000, &scan_callback);
-    ros::Subscriber point_sub = nh.subscribe("/my_cloud",1000, &point_cloud_callback);
     
-    // ros::Subscriber map_metadata_sub = nh.subscribe("/",1000, &map_metadata_sub);
+    // Global costmap subscriber
+    ros::Subscriber g_sub = nh.subscribe("/map",1000,global_map_callback);
+    // Local costmap subscriber
+    ros::Subscriber l_sub = nh.subscribe("/move_base/local_costmap/costmap",1000,local_map_callback);
+    // Position subscriber 
+    ros::Subscriber pos = nh.subscribe("/amcl_pose",1000,amcl_callback);
 
-    ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1000);
     while(ros::ok()){
-        ros::spinOnce();
-        ROS_INFO("Initializing starting point");
-        // plan.setNavArr(map.info.width, map.info.height);
-        
-        r.sleep();
-        if(check_for_obstacles(scan)){
-            // ROS_INFO("The coast is clear! Ready to move!");
-            // ROS_INFO("Moving:");
-            navigate nav;
-            nav.linear.x = 1;
-            pub.publish(nav);
+        // Collect all the values of the map in the vector
+        while(!map_initiliazed){
+            ros::spinOnce();
         }
-        else{
-            // ROS_INFO_STREAM("There is something interesting around!");
-            // ROS_INFO_STREAM("Analysing ..");
-            navigate stop;
-            stop.linear.x = 0;
-            pub.publish(stop);
-            float size = identitify_obstacles(scan);
-            navigate turn = turn_to_maximum(scan);
-            pub.publish(turn);
-            
-        }
+        // take in all the values of the map in the vector
+        // Building the map for global
+        for(std::vector<std::pair<geometry_msgs::Point, int>>::iterator g_it=g_map.begin();g_it!=g_map.end();++g_it){
+            for(std::vector<std::pair<geometry_msgs::Point, int>>::iterator l_it=l_map.begin();l_it!=l_map.end();++l_it){
         
+                        
+                if(!check_map_descrepancy(l_it->first, g_it->first, l_it->second, g_it->second)){
+                    // Navigate to point P
+                    ROS_INFO_STREAM("Local map and Global map do not meet same requirements at:"<<l_it->first.x<<","<<l_it->first.y<<","<<l_it->first.z);
+                    ROS_INFO_STREAM("Generating points to destination");
+                    boost::optional<occupancy_grid_utils::AStarResult> gen_path=\
+                    occupancy_grid_utils::shortest_path(l_map,Pose.pose.pose.position, l_it->second); 
+                    label:
+                    if(gen_path.is_initialized()){
+                        occupancy_grid_utils::AStarResult Path=*gen_path;  
+                        for(int i=0; i<Path.first.size();++i){
+                            Path.push_back(occupancy_grid_utils::cellCenter(gen_path[i],l_it.info))
+                        }
+                    }
+                    else{
+                        goto label;
+                    }
+                    
+                    while (!ac.waitForServer()){
+                        ROS_INFO_STREAM("Hmmm... I thought the server was up. Strange!");
+                    }
+                    // Extract path between current position and destination
+                    move_base_msgs::MoveBaseGoal goal;
+                    goal.target_pose.header.frame_id = "map";     
+                    goal.target_pose.header.stamp = ros::Time::now();         
+                    goal.target_pose.pose.position.x = l_it->first.x;     
+                    goal.target_pose.pose.position.y = l_it->first.y;     
+                    goal.target_pose.pose.orientation.w = 1.0;
+                    ac.sendGoal(goal,&serviceDone,&serviceActivated,&serviceFeedback);
+                }
+                else
+                    flag = true;
+                        
+            }
+
+        }
     }
+
 }
 // Setting the pse for the position of the robot
 void amcl_callback(const geometry_msgs::PoseWithCovarianceStamped& msg) {
-    // ROS_INFO("Position is set!");
-    amcl_pose = msg;
+    // Initailiazing current position
+    Pose = msg;
 }
 
+
 // Occupancy grid of the navigation map
-void map_callback(const nav_msgs::OccupancyGrid& msg) {
-    // ROS_INFO("Map set!");
-    // map=msg;
-    // ROS_INFO_STREAM("The size of the map is:\t"<<msg.info.width);
+void global_map_callback(const nav_msgs::OccupancyGrid& msg) {
+    g_occ = msg;
+    for(int i=0; i<msg.data.size(); ++i){
+
+        g_map.push_back(std::make_pair(occupancy_grid_utils::cellCenter\
+            (msg.info, occupancy_grid_utils::indexCell(msg.info, i)), msg.data[i]))
+    }
+    ROS_INFO_STREAM("Global Map initialized!")
+    
 }	
 
-// LaserScan
-void scan_callback(const sensor_msgs::LaserScan& msg){
-    scan = msg;
-    
+void local_map_callback(const nav_msgs::OccupancyGrid& msg){
+    l_occ=msg;
+    for(int i=0; i<msg.data.size(); ++i){
+        occupancy_grid_utils::indexCell cell = ;
+        l_map.push_back(std::make_pair(occupancy_grid_utils::cellCenter\
+            (msg.info, occupancy_grid_utils::indexCell(msg.info, i)), msg.data[i])) ;
+    }
+    ROS_INFO_STREAM("Local map initialized!");
+
+}
+
+bool check_map_descrepancy(geometry_msgs::Point l_it, geometry_msgs::Point g_it, int l_data, int g_data){
+    if(l_it.x==g_it.x && l_it.y==g_it.y){
+        if(l_data == g_data)
+            return true;
+        else
+            return false;
+    }
 }
 
 // Check for the obstacles on the map
